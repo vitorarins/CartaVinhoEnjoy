@@ -209,7 +209,7 @@ class Register(Signup):
             u = User.register(self.username, self.password, self.email)
             u.put()
             self.login(u)
-            self.redirect('/blog/welcome')
+            self.redirect('/welcome')
 
 class Login(BlogHandler):
     def get(self):
@@ -244,7 +244,15 @@ class SubmitPost(BlogHandler):
             self.redirect("/%s" % id)
         else:
             error = "We need both a title and some content!"
-            self.render("blog_newpost.html",subject=title,content=post,error=error)  
+            self.render("blog_newpost.html",subject=title,content=post,error=error)
+
+class DeletePost(BlogHandler):
+    def get(self):
+        post_id = self.request.get("pid")
+        key = db.Key.from_path('Post',int(post_id))
+        post = db.get(key)
+        post.delete
+        self.redirect("/")
 
 class Permalink(BlogHandler):
     def get(self,entry_id):
@@ -306,6 +314,7 @@ app = webapp2.WSGIApplication([('/([0-9]+)(?:.json)?',Permalink),
                                ('/signup',Register),
                                ('/login',Login),
                                ('/logout',Logout),
+                               ('/delete',DeletePost),
                                ('/welcome',Welcome)], debug=True)
 
 def main():
