@@ -1,0 +1,20 @@
+<div class="post">
+  <div class="post-heading">
+    <div class="post-title">
+      <a href="/{{p.key().id()}}" class="post-title">
+         {{p.subject}}
+      </a>
+    </div>
+
+    <div class="delete">
+      <a href="/delete?pid={{p.key().id()}}"><img src="/images/red_cross_mark.gif"/></a>
+    </div>
+    <div class="edit">
+      <a href="/delete?pid={{p.key().id()}}"><img src="/images/edit_button.gif"/></a>
+    </div>
+  </div>
+
+  <div class="post-content">
+    {{p._render_text | safe}}
+  </div>
+</div>
