@@ -163,7 +163,12 @@ def add_post(post):
     post.put()
     get_posts(update=True)
     return str(post.key().id())
-        
+
+def delete_post(post):
+    db.delete(post)
+    get_posts(update=True)
+    return str(post.key().id())
+    
 class Post(db.Model):
     subject = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
@@ -186,12 +191,10 @@ class Post(db.Model):
 class PostPage(BlogHandler):
     def get(self,entry_id):
         post_key = 'POST_' + entry_id
-        post,age = age_get(post_key)
-        if not post:
-            key = db.Key.from_path('Post',int(entry_id))
-            post = db.get(key)
-            age_set(post_key,post)
-            age=0
+        key = db.Key.from_path('Post',int(entry_id))
+        post = db.get(key)
+        age_set(post_key,post)
+        age=0
         if not post:
             self.error(404)
             return
@@ -223,6 +226,44 @@ class NewPost(BlogHandler):
             error = "We need both a title and some content!"
             self.render("newpost.html", subject=subject, content=content, error=error)
 
+class EditPost(BlogHandler):
+
+    def post(self, post_id):
+        iden = int(post_id)
+        post = db.get(db.Key.from_path('Post', iden))
+        post.subject = self.request.get('subject')
+        post.content = self.request.get('content')
+        post.last_modified = datetime.now()
+        id = add_post(post)
+        self.redirect('/%s' % id)
+
+    def get(self, post_id):
+        post_key = 'POST_' + post_id
+        key = db.Key.from_path('Post',int(post_id))
+        post = db.get(key)
+        age_set(post_key,post)
+        age=0
+        if not post:
+            self.error(404)
+            return    
+        self.render('newpost.html', subject=post.subject,
+                    content=post.content,
+                    error="")
+
+class DeletePost(BlogHandler):
+    def get(self, post_id):
+        post_key = 'POST_' + post_id
+        post,age = age_get(post_key)
+        if not post:
+            key = db.Key.from_path('Post',int(post_id))
+            post = db.get(key)
+            age_set(post_key,post)
+            age=0
+        if not post:
+            self.error(404)
+            return    
+        delete_post(post)
+        self.redirect('/')
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 def valid_username(username):
@@ -329,5 +370,12 @@ app = webapp2.WSGIApplication([('/?(?:.json)?', MainPage),
                                ('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
+                               ('/delete/([0-9]+)', DeletePost),
+                               ('/edit/([0-9]+)', EditPost),
                                ('/welcome', Welcome), ],
                               debug=True)
+def main():
+    app.run()
+
+if __name__ == "__main__":
+    main()
