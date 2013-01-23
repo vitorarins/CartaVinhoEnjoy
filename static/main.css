@@ -77,16 +77,16 @@ input[type=submit] {
     text-decoration: none;
 }
 
-.post + .post {
+.wine + .wine {
     margin-top: 15px;
 }
 
-.post-heading {
+.wine-heading {
     position: relative;
     border-bottom: 3px solid #666;
 }
 
-.post-title {
+.wine-title {
     font-size: 24px;
     font-weight: bold;
     text-decoration: none;
@@ -105,7 +105,7 @@ input[type=submit] {
     bottom: 0px;
 }
 
-.post-content {
+.wine-content {
     margin-top: 5px;
 }
 

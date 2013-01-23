@@ -1,12 +1,10 @@
 import os
 import re
-import random
-import hashlib
 import hmac
 import logging
 import json
-from string import letters
 import webapp2
+import utils
 import jinja2
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -19,6 +17,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime, timedelta
 from google.appengine.api import memcache
 from google.appengine.ext import db
+from models import User, Wine
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
@@ -26,9 +25,6 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
 
 secret = 'dvamefFVAEWfdsnclaSFvjudfaVfnasfart'
 
-def render_str(template, **params):
-    t = jinja_env.get_template(template)
-    return t.render(params)
 
 def make_secure_val(val):
     return '%s|%s' % (val, hmac.new(secret, val).hexdigest())
@@ -83,68 +79,21 @@ class BlogHandler(webapp2.RequestHandler):
 
 class MainPage(BlogHandler):
     def get(self):
-        posts,age = get_posts()
+        wines,age = get_wines()
         if self.format == 'html':
-            self.render("front.html",posts=posts,age=age_str(age))
+            self.render("front.html",wines=wines,age=age_str(age))
         elif self.format == 'json':
-            return self.render_json([p.as_dict() for p in posts])
-
-        
-
-##### user stuff
-def make_salt(length = 5):
-    return ''.join(random.choice(letters) for x in xrange(length))
-
-def make_pw_hash(name, pw, salt = None):
-    if not salt:
-        salt = make_salt()
-    h = hashlib.sha256(name + pw + salt).hexdigest()
-    return '%s,%s' % (salt, h)
-
-def valid_pw(name, password, h):
-    salt = h.split(',')[0]
-    return h == make_pw_hash(name, password, salt)
-
-def users_key(group = 'default'):
-    return db.Key.from_path('users', group)
-
-class User(db.Model):
-    name = db.StringProperty(required = True)
-    pw_hash = db.StringProperty(required = True)
-    email = db.StringProperty()
-
-    @classmethod
-    def by_id(cls, uid):
-        return User.get_by_id(uid, parent = users_key())
-
-    @classmethod
-    def by_name(cls, name):
-        u = User.all().filter('name =', name).get()
-        return u
-
-    @classmethod
-    def register(cls, name, pw, email = None):
-        pw_hash = make_pw_hash(name, pw)
-        return User(parent = users_key(),
-                    name = name,
-                    pw_hash = pw_hash,
-                    email = email)
-
-    @classmethod
-    def login(cls, name, pw):
-        u = cls.by_name(name)
-        if u and valid_pw(name, pw, u.pw_hash):
-            return u
+            return self.render_json([p.as_dict() for p in wines])
 
 ##### blog stuff
-def get_posts(update = False):
-    q = Post.all().order('-created').fetch(limit=10)
+def get_wines(update = False):
+    q = Wine.all().order('-created').fetch(limit=10)
     mc_key = 'BLOGS'
-    posts, age = age_get(mc_key)
-    if update or posts is None:
-        posts = list(q)
-        age_set(mc_key,posts)
-    return posts, age
+    wines, age = age_get(mc_key)
+    if update or wines is None:
+        wines = list(q)
+        age_set(mc_key,wines)
+    return wines, age
 
 def age_str(age):
     s = 'queried %s seconds ago'
@@ -166,55 +115,36 @@ def age_get(key):
         val, age = None,0
     return val,age
 
-def add_post(post):
-    post.put()
-    get_posts(update=True)
-    return str(post.key().id())
+def add_wine(wine):
+    wine.put()
+    get_wines(update=True)
+    return str(wine.key().id())
 
-def delete_post(post):
-    db.delete(post)
-    get_posts(update=True)
-    return str(post.key().id())
+def delete_wine(wine):
+    db.delete(wine)
+    get_wines(update=True)
+    return str(wine.key().id())
     
-class Post(db.Model):
-    subject = db.StringProperty(required = True)
-    content = db.TextProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(auto_now = True)
-
-    def render(self):
-        self._render_text = self.content.replace('\n', '<br>')
-        return render_str("post.html", p = self)
-
-    def as_dict(self):
-        time_fmt = '%c'
-
-        d = {'subject': self.subject,
-             'content': self.content,
-             'created': self.created.strftime(time_fmt),
-             'last_modified': self.last_modified.strftime(time_fmt)}
-        return d
-
-class PostPage(BlogHandler):
+class WinePage(BlogHandler):
     def get(self,entry_id):
-        post_key = 'POST_' + entry_id
-        key = db.Key.from_path('Post',int(entry_id))
-        post = db.get(key)
-        age_set(post_key,post)
+        wine_key = 'WINE_' + entry_id
+        key = db.Key.from_path('Wine',int(entry_id))
+        wine = db.get(key)
+        age_set(wine_key,wine)
         age=0
-        if not post:
+        if not wine:
             self.error(404)
             return
         if self.format == 'html':
-            self.render("permalink.html", entry=post,age=age_str(age))
+            self.render("permalink.html", entry=wine,age=age_str(age))
         elif self.format == 'json':
-            self.render_json(post.as_dict())
+            self.render_json(wine.as_dict())
 
 
-class NewPost(BlogHandler):
+class NewWine(BlogHandler):
     def get(self):
         if self.user:
-            self.render("newpost.html")
+            self.render("newwine.html")
         else:
             self.redirect("/login")
 
@@ -226,54 +156,54 @@ class NewPost(BlogHandler):
         content = self.request.get('content')
 
         if subject and content:
-            p = Post(subject=subject, content=content)
-            id = add_post(p)
+            p = Wine(subject=subject, content=content)
+            id = add_wine(p)
             self.redirect('/%s' % id)
         else:
             error = "We need both a title and some content!"
-            self.render("newpost.html", subject=subject, content=content, error=error)
+            self.render("newwine.html", subject=subject, content=content, error=error)
 
-class EditPost(BlogHandler):
+class EditWine(BlogHandler):
 
-    def post(self, post_id):
-        iden = int(post_id)
-        post = db.get(db.Key.from_path('Post', iden))
-        post.subject = self.request.get('subject')
-        post.content = self.request.get('content')
-        post.last_modified = datetime.now()
-        id = add_post(post)
+    def post(self, wine_id):
+        iden = int(wine_id)
+        wine = db.get(db.Key.from_path('Wine', iden))
+        wine.subject = self.request.get('subject')
+        wine.content = self.request.get('content')
+        wine.last_modified = datetime.now()
+        id = add_wine(wine)
         self.redirect('/%s' % id)
 
-    def get(self, post_id):
+    def get(self, wine_id):
         if not self.user:
             self.redirect('/login')
-        post_key = 'POST_' + post_id
-        key = db.Key.from_path('Post',int(post_id))
-        post = db.get(key)
-        age_set(post_key,post)
+        wine_key = 'WINE_' + wine_id
+        key = db.Key.from_path('Wine',int(wine_id))
+        wine = db.get(key)
+        age_set(wine_key,wine)
         age=0
-        if not post:
+        if not wine:
             self.error(404)
             return    
-        self.render('newpost.html', subject=post.subject,
-                    content=post.content,
+        self.render('newwine.html', subject=wine.subject,
+                    content=wine.content,
                     error="")
 
-class DeletePost(BlogHandler):
-    def get(self, post_id):
+class DeleteWine(BlogHandler):
+    def get(self, wine_id):
         if not self.user:
             self.redirect('/login')
-        post_key = 'POST_' + post_id
-        post,age = age_get(post_key)
-        if not post:
-            key = db.Key.from_path('Post',int(post_id))
-            post = db.get(key)
-            age_set(post_key,post)
+        wine_key = 'WINE_' + wine_id
+        wine,age = age_get(wine_key)
+        if not wine:
+            key = db.Key.from_path('Wine',int(wine_id))
+            wine = db.get(key)
+            age_set(wine_key,wine)
             age=0
-        if not post:
+        if not wine:
             self.error(404)
             return    
-        delete_post(post)
+        delete_wine(wine)
         self.redirect('/')
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
@@ -395,14 +325,14 @@ class PDFHandler(BlogHandler):
       c.save()
 
 app = webapp2.WSGIApplication([('/?(?:.json)?', MainPage),
-                               ('/([0-9]+)(?:.json)?', PostPage),
+                               ('/([0-9]+)(?:.json)?', WinePage),
                                ('/flush', FlushHandler),
-                               ('/newpost', NewPost),
+                               ('/newwine', NewWine),
                                ('/signup', Signup),
                                ('/login', Login),
                                ('/logout', Logout),
-                               ('/delete/([0-9]+)', DeletePost),
-                               ('/edit/([0-9]+)', EditPost),
+                               ('/delete/([0-9]+)', DeleteWine),
+                               ('/edit/([0-9]+)', EditWine),
                                ('/pdf', PDFHandler),
                                ('/welcome', Welcome), ],
                               debug=True)

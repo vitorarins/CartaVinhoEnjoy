@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Vinho</h2>
+
+    <form method="post">
+      <label>
+        <div>País</div>
+        <select name="country">
+          {% for c in countries %}
+          <option value="{{c.name}}">{{c.name}}</option>
+          {% endfor %}
+        </select>
+      </label>
+      
+      <label>
+        <div>Subregião</div>
+        <select name="subregion">
+          {% for s in subregions %}
+          <option value="{{s.name}}">{{s.name}}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>
+        <div>Tipo de Vinho</div>
+          {% for wt in wine_types %}
+        <br><input type="checkbox" value="{{wt.name}}">{{wt.name}}
+          {% endfor %}
+      </label>
+
+      <label>
+        <div>Uva</div>
+        <select name="grape">
+          {% for g in grapes %}
+          <option value="{{g.name}}">{{g.name}}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>
+        <div>Nome</div>
+        <input type="text" name="name" value="{{name}}">
+      </label>
+
+      <label>
+        <div>Produtor</div>
+        <input type="text" name="maker" value="{{maker}}">
+      </label>
+
+      <label>
+        <div>Safra</div>
+        <input type="text" name="year" value="{{year}}">
+      </label>      
+
+      <label>
+        <div>Terroir</div>
+        <input type="text" name="terroir" value="{{terroir}}">
+      </label>      
+
+      <label>
+        <div>Graduação Alcoólica</div>
+        <input type="text" name="alc" value="{{alc}}">
+      </label>      
+
+      <label>
+        <div>Preço</div>
+        <input type="text" name="value" value="{{value}}">
+      </label>      
+
+      <label>
+        <div>Premiações</div>
+        <input type="text" name="prize" value="{{prize}}">
+      </label>
+
+      <label>
+        <div>Informações Adicionais</div>
+        <textarea name="more_info">{{more_info}}</textarea>
+      </label>      
+
+      <div class="error">{{error}}</div>
+
+      <input type="submit">
+    </form>
+{% endblock %}
