@@ -116,3 +116,26 @@ input[type=submit] {
     color: gray;
     font-size: 12px;
 }
+
+.pdf-generator {
+    postion: absolute;
+    bottom: 0px;
+    right: 0px;
+    color: gray;
+}
+
+.pdf-link {
+    color: gray;
+    text-decoration: none;
+    font-size: large;    
+}
+
+.pdf-link:visited {
+    color: gray;
+
+}
+
+.pdf-link:hover {
+    text-decoration: underline;
+
+}

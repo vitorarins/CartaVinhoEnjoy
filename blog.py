@@ -8,7 +8,14 @@ import json
 from string import letters
 import webapp2
 import jinja2
-
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.platypus import flowables
+import reportlab.rl_config
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime, timedelta
 from google.appengine.api import memcache
 from google.appengine.ext import db
@@ -238,6 +245,8 @@ class EditPost(BlogHandler):
         self.redirect('/%s' % id)
 
     def get(self, post_id):
+        if not self.user:
+            self.redirect('/login')
         post_key = 'POST_' + post_id
         key = db.Key.from_path('Post',int(post_id))
         post = db.get(key)
@@ -252,6 +261,8 @@ class EditPost(BlogHandler):
 
 class DeletePost(BlogHandler):
     def get(self, post_id):
+        if not self.user:
+            self.redirect('/login')
         post_key = 'POST_' + post_id
         post,age = age_get(post_key)
         if not post:
@@ -311,10 +322,6 @@ class Signup(BlogHandler):
         else:
             self.done()
 
-    def done(self, *a, **kw):
-        raise NotImplementedError
-
-class Register(Signup):
     def done(self):
         #make sure the user doesn't already exist
         u = User.by_name(self.username)
@@ -352,26 +359,51 @@ class Logout(BlogHandler):
 
 class Welcome(BlogHandler):
     def get(self):
-        username = self.request.get('username')
-        if valid_username(username):
-            self.render('welcome.html', username = username)
+        if self.user:
+            self.render('welcome.html', username=self.user.name)
         else:
-            self.redirect('/')
+            self.redirect('/signup')
 
 class FlushHandler(BlogHandler):
     def get(self):
         memcache.flush_all()
         self.redirect('/')
 
+reportlab.rl_config.warnOnMissingFontGlyphs = 0
+        
+class PDFHandler(BlogHandler):
+  def get(self):
+      pdfmetrics.registerFont(TTFont('AcmeSE', 'acmesa.TTF'))
+      pdfmetrics.registerFont(TTFont('AcmeSEBd', 'acmesab.TTF'))
+      pdfmetrics.registerFont(TTFont('AcmeSEIt', 'acmesai.TTF'))
+      self.response.headers['Content-Type'] = 'application/pdf'
+      self.response.headers['Content-Disposition'] = 'attachment; filename=my.pdf'
+      c = canvas.Canvas(self.response.out, pagesize=A4)
+      c.drawString(100, 100, "Vinhos")
+      # image_data is a raw string containing a JPEG
+      fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images/vinhos.jpg')
+      # Draw it in the bottom left, 2 inches high and 2 inches wide
+      c.drawInlineImage(fn, 3*cm, 5*cm)
+      c.showPage()
+      text = c.beginText()
+      text.setTextOrigin(1*cm, 5*cm)
+      text.setFont("AcmeSE",20)
+      text.textLine("Hello world!")
+      text.textLine("Look ma, multiple lines!")
+      c.drawText(text)
+      c.showPage()
+      c.save()
+
 app = webapp2.WSGIApplication([('/?(?:.json)?', MainPage),
                                ('/([0-9]+)(?:.json)?', PostPage),
                                ('/flush', FlushHandler),
                                ('/newpost', NewPost),
-                               ('/signup', Register),
+                               ('/signup', Signup),
                                ('/login', Login),
                                ('/logout', Logout),
                                ('/delete/([0-9]+)', DeletePost),
                                ('/edit/([0-9]+)', EditPost),
+                               ('/pdf', PDFHandler),
                                ('/welcome', Welcome), ],
                               debug=True)
 def main():
