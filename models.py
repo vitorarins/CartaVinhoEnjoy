@@ -13,40 +13,6 @@ def render_str(template, **params):
     t = jinja_env.get_template(template)
     return t.render(params)
 
-##### wine stuff
-class Wine(db.Model):
-    name = db.StringProperty(required = True)
-    country = Country()
-    subregion = Subregion()
-    wine_type = WineType()
-    grape = Grape()
-    maker = db.StringProperty()
-    year = db.StringProperty()
-    terroir = db.StringProperty()
-    alc = db.StringProperty()
-    prize = db.StringProperty()
-    value = db.StringProperty()
-    more_info = db.TextProperty()
-
-    def render(self):
-        self._render_text = self.content.replace('\n', '<br>')
-        return render_str("wine.html", p = self)
-
-    def as_dict(self):
-        d = {'name': self.name,
-             'country': self.country,
-             'subregion': self.subregion,
-             'wine_type': self.wine_type,
-             'grape': self.grape,
-             'maker': self.maker,
-             'year': self.year,
-             'terroir': self.terroir,
-             'alc': self.alc,
-             'prize': self.prize,
-             'more_info': self.more_info,             
-             'value': self.value}
-        return d
-
 ##### user stuff    
 class User(db.Model):
     name = db.StringProperty(required = True)
@@ -108,6 +74,7 @@ class Country(db.Model):
 ##### subregion stuff
 class Subregion(db.Model):
     name = db.StringProperty(required = True)
+    country = db.ReferenceProperty(Country)
 
     @classmethod
     def by_id(cls, uid):
@@ -145,3 +112,36 @@ class Grape(db.Model):
         return u
     
     
+##### wine stuff
+class Wine(db.Model):
+    name = db.StringProperty(required = True)
+    country = db.ReferenceProperty(Country)
+    subregion = db.ReferenceProperty(Subregion)
+    wine_type = db.ReferenceProperty(WineType)
+    grape = db.ReferenceProperty(Grape)
+    maker = db.StringProperty()
+    year = db.StringProperty()
+    terroir = db.StringProperty()
+    alc = db.StringProperty()
+    prize = db.StringProperty()
+    value = db.StringProperty()
+    more_info = db.TextProperty()
+
+    def render(self):
+        self._render_text = self.content.replace('\n', '<br>')
+        return render_str("wine.html", p = self)
+
+    def as_dict(self):
+        d = {'name': self.name,
+             'country': self.country,
+             'subregion': self.subregion,
+             'wine_type': self.wine_type,
+             'grape': self.grape,
+             'maker': self.maker,
+             'year': self.year,
+             'terroir': self.terroir,
+             'alc': self.alc,
+             'prize': self.prize,
+             'more_info': self.more_info,             
+             'value': self.value}
+        return d

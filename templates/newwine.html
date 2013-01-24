@@ -25,7 +25,7 @@
       <label>
         <div>Tipo de Vinho</div>
           {% for wt in wine_types %}
-        <br><input type="checkbox" value="{{wt.name}}">{{wt.name}}
+        <br><input type="radio" name="wine_type" value="{{wt.name}}">{{wt.name}}
           {% endfor %}
       </label>
 

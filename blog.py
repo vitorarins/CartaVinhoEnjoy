@@ -1,3 +1,5 @@
+#!/usr/bin/python
+#coding: utf-8
 import os
 import re
 import hmac
@@ -87,7 +89,7 @@ class MainPage(BlogHandler):
 
 ##### blog stuff
 def get_wines(update = False):
-    q = Wine.all().order('-created').fetch(limit=10)
+    q = Wine.all().order('-name').fetch(limit=10)
     mc_key = 'BLOGS'
     wines, age = age_get(mc_key)
     if update or wines is None:
@@ -152,25 +154,94 @@ class NewWine(BlogHandler):
         if not self.user:
             self.redirect('/')
 
-        subject = self.request.get('subject')
-        content = self.request.get('content')
+        country = self.request.get('country')
+        if country:
+            c = Country(name=country)
+            
+        subregion = self.request.get('subregion')
+        if subregion:
+            s = Subregion(name=subregion, country=c)
+            
+        wine_type = self.request.get('wine_type')
+        if wine_type:
+            wt = WineType(name=wine_type)
+            
+        grape = self.request.get('grape')
+        if grape:
+            g = Grape(name=grape)
+            
+        name = self.request.get('name')
+        maker = self.request.get('maker')
+        year = self.request.get('year')
+        terroir = self.request.get('terroir')
+        alc = self.request.get('alc')
+        value = self.request.get('value')
+        prize = self.request.get('prize')
+        more_info = self.request.get('more_info')
 
-        if subject and content:
-            p = Wine(subject=subject, content=content)
+        if name and wine_type:
+            p = Wine(country=c,
+                     subregion=s,
+                     wine_type=wt,
+                     grape=g,
+                     name=name,
+                     maker=maker,
+                     year=year,
+                     terroir=terroir,
+                     alc=alc,
+                     value=value,
+                     prize=prize,
+                     more_info=more_info)
             id = add_wine(p)
             self.redirect('/%s' % id)
         else:
-            error = "We need both a title and some content!"
-            self.render("newwine.html", subject=subject, content=content, error=error)
+            error = "É preciso adicionar ao menos o nome e um tipo de uva."
+            self.render("newwine.html",
+                        country=country,
+                        subregion=subregion,
+                        wine_type=wine_type,
+                        grape=grape,
+                        name=name,
+                        maker=maker,
+                        year=year,
+                        terroir=terroir,
+                        alc=alc,
+                        value=value,
+                        prize=prize,
+                        more_info=more_info,
+                        error=error)
 
 class EditWine(BlogHandler):
 
     def post(self, wine_id):
         iden = int(wine_id)
         wine = db.get(db.Key.from_path('Wine', iden))
-        wine.subject = self.request.get('subject')
-        wine.content = self.request.get('content')
-        wine.last_modified = datetime.now()
+
+        country = self.request.get('country')
+        if country:
+            wine.country = Country(name=country)
+    
+        subregion = self.request.get('subregion')
+        if subregion:
+            wine.subregion = Subregion(name=subregion, country=c)
+        
+        wine_type = self.request.get('wine_type')
+        if wine_type:
+            wine.wine_type = WineType(name=wine_type)
+            
+        grape = self.request.get('grape')
+        if grape:
+            wine.grape = Grape(name=grape)
+            
+        wine.name = self.request.get('name')
+        wine.maker = self.request.get('maker')
+        wine.year = self.request.get('year')
+        wine.terroir = self.request.get('terroir')
+        wine.alc = self.request.get('alc')
+        wine.value = self.request.get('value')
+        wine.prize = self.request.get('prize')
+        wine.more_info = self.request.get('more_info')
+
         id = add_wine(wine)
         self.redirect('/%s' % id)
 
@@ -185,8 +256,19 @@ class EditWine(BlogHandler):
         if not wine:
             self.error(404)
             return    
-        self.render('newwine.html', subject=wine.subject,
-                    content=wine.content,
+        self.render('newwine.html',
+                    country=wine.country.name,
+                    subregion=wine.subregion.name,
+                    wine_type=wine.wine_type.name,
+                    grape=wine.grape.name,
+                    name=wine.name,
+                    maker=wine.maker,
+                    year=wine.year,
+                    terroir=wine.terroir,
+                    alc=wine.alc,
+                    value=wine.value,
+                    prize=wine.prize,
+                    more_info=wine.more_info,                    
                     error="")
 
 class DeleteWine(BlogHandler):
