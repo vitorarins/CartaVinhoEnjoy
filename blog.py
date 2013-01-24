@@ -19,7 +19,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime, timedelta
 from google.appengine.api import memcache
 from google.appengine.ext import db
-from models import User, Wine
+from models import User, Wine, WineType, Country, Subregion, Grape
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
@@ -88,6 +88,8 @@ class MainPage(BlogHandler):
             return self.render_json([p.as_dict() for p in wines])
 
 ##### blog stuff
+
+        
 def get_wines(update = False):
     q = Wine.all().order('-name').fetch(limit=10)
     mc_key = 'BLOGS'
@@ -146,7 +148,18 @@ class WinePage(BlogHandler):
 class NewWine(BlogHandler):
     def get(self):
         if self.user:
-            self.render("newwine.html")
+            c = Country.all().order('-name')
+            countries = list(c)
+            s = Subregion.all().order('-name')
+            subregion = list(s)
+            wt = WineType.all().order('-name')
+            wine_types = list(wt)
+            g = Grape.all().order('-name')
+            grapes = list(g)
+            self.render("newwine.html",countries=countries,
+                        subregions=subregion,
+                        wine_types=wine_types,
+                        grapes=grapes)
         else:
             self.redirect("/login")
 
